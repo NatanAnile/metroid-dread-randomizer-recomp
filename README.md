@@ -10,6 +10,8 @@ voltar ao vanilla é um clique.
 
 > Não oficial. Sem relação com a Nintendo, o Randovania ou os autores do Dread Recomp. Você precisa da sua própria cópia do jogo.
 > Este repositório **não contém arquivos do jogo** (nem ExeFS/RomFS, chaves ou firmware).
+>
+> **Aviso:** a pasta do Dread Recomp montada na sua instalação, e a pasta `mods\Randovania` que o app gera, contêm o jogo. Elas são só para o seu uso pessoal. **Não compartilhe nem envie para a internet.**
 
 ## O que tem aqui
 
@@ -78,6 +80,8 @@ going back to vanilla is one click.
 
 > Unofficial. Not affiliated with Nintendo, Randovania or the Dread Recomp authors. You need your own copy of the game. This
 > repository contains **no game files** (no ExeFS/RomFS, keys or firmware).
+>
+> **Warning:** the Dread Recomp folder your installation builds, and the `mods\Randovania` folder the app generates, contain the game. They are for your personal use only. **Do not share them or upload them to the internet.**
 
 ### What is in this repository
 
@@ -103,7 +107,7 @@ seed never needs a recompile.
 
 ### Quick start (players)
 
-1. Have a Dread Recomp build **with the patch** ([BUILDING](docs/BUILDING.md)) and the exlaunch module in `Metroid Dread_data\exefs\subsdk9` ([USAGE](docs/USAGE.md)).
+1. Have a Dread Recomp build **with the patch**, based on your own official dump ([BUILDING](docs/BUILDING.md)), and the exlaunch module in `Metroid Dread_data\exefs\subsdk9` ([USAGE](docs/USAGE.md)).
 2. Generate a seed in Randovania and export/save its `.rdvgame`.
 3. Close the game, open `apply_rdvgame.exe`, press **Apply a seed...**, pick the file (or drag the `.rdvgame` onto the exe).
 4. Start the game. **Back to vanilla** in the same window removes the mod.

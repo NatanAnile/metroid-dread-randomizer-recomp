@@ -1,5 +1,7 @@
 # Usage
 
+> **Warning:** the Dread Recomp folder your installation builds, and the `mods\Randovania` folder the app generates, contain the game. They are for your personal use only. **Do not share them or upload them to the internet.** Share only the `.rdvgame` seed file.
+
 ## What you need
 
 - A Dread Recomp installation, set up with your own dump of Metroid Dread **2.1.0** (build ID `646761F643AFEBB379EDD5E6A5151AF2CEF93DC1`), built **with `patches/recomp-randomizer-support.patch`** ([BUILDING](BUILDING.md)).
