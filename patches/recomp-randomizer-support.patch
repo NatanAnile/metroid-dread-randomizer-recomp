@@ -1,0 +1,295 @@
+diff --git a/codegen.py b/codegen.py
+index c2de526..f63092a 100644
+--- a/codegen.py
++++ b/codegen.py
+@@ -233,6 +233,16 @@ def fix_undef(code, pc, w):
+     return code.replace('UNDEF()', 'c->rt->undef(c,%s,%s)' % (lit(pc), lit(w)))
+ 
+ 
++# Entries the randomizer's exlaunch (subsdk9) hooks by rewriting their first instruction (Metroid Dread 2.1.0; main is at
++# 0x8005000): CFilePathStrIdCtor, luaRegisterGlobals, LogWarn, OnCollectPickup, PlayPickupSound, ShowItemPickupMessage,
++# PlaySoundWithCallback, SyncTeleporterPairs, and nn::fs::MountRom in sdk. Each starts with a guard on its first word.
++HOOKED_ENTRIES = {0x801B6C8, 0x90B3D50, 0x9099820, 0x89D5E28, 0x89D66C4, 0x8B64D9C, 0x8FDE0D8, 0x8B472A8, 0x7B2B4100,
++                  0x90993A0}   # the last: the debug_input function that the Randovania IPS replaces (main+0x10943A0)
++# Instructions inside functions that the Randovania ExeFS patch (646761F6...ips) rewrites: main+0xDA7380 (Corpius item) and
++# main+0x11E7F1C (the bl that shows the Aeion message, nopped) and main+0xAE9D70 (door lock buffer size). Absolute = 0x8005000 + main offset
++HOOKED_INSNS = {0x8DAC380, 0x91ECF1C, 0x8AEED70}
++
++
+ def emit_function(prog, f, funcs):
+     s = f.addrs; sset = set(s)
+     L = f.leaders
+@@ -242,6 +252,10 @@ def emit_function(prog, f, funcs):
+         out.append(' if(UNLIKELY(e!=%s)){ c->pc=e; goto D_; }' % lit(f.start))
+     else:
+         out.append(' if(UNLIKELY(e!=%s)){ CALLDYN(e); return; }' % lit(f.start))
++    if f.start in HOOKED_ENTRIES:
++        w0 = prog.decode(f.start)[0]
++        if w0 is not None:   # exlaunch rewrote this entry in guest memory: run it in the interpreter
++            out.append(' if(UNLIKELY(RD32(%s)!=%s)){ swr_interp_entry(c,e); return; }' % (lit(f.start), lit(w0)))
+     if s and s[0] != f.start:
+         out.append(' goto L_%X;' % f.start)
+ 
+@@ -256,6 +270,8 @@ def emit_function(prog, f, funcs):
+     for i, x in enumerate(s):
+         if x in L: out.append('L_%X:' % x)
+         w, r = prog.decode(x)
++        if x in HOOKED_INSNS and w is not None:   # an ExeFS (IPS) patch changes this instruction: finish the function in the interpreter
++            out.append(' if(UNLIKELY(RD32(%s)!=%s)){ swr_interp_entry(c,%s); return; }' % (lit(x), lit(w), lit(x)))
+         nxt = x + 4
+         if w is None or r is None:
+             out.append(' c->pc=%s; c->rt->undef(c,%s,%s); return;' % (lit(x), lit(x), lit(w or 0)))
+diff --git a/dread/dread_setup.py b/dread/dread_setup.py
+index 9e50625..cab76df 100644
+--- a/dread/dread_setup.py
++++ b/dread/dread_setup.py
+@@ -344,8 +344,11 @@ def main():
+ 
+         import switchrecomp, nxloader, codegen   # the SwitchRecomp translator, bundled next to this script
+         gen_marker = os.path.join(build, '.generated')
++        s9 = os.path.join(ex_dst, 'subsdk9')   # the randomizer's module: its presence and build id change the generated code
+         gen_key = hashlib.sha1(open(os.path.join(ex_dst, 'main'), 'rb').read()[:0x100] + open(PATCHES, 'rb').read()
+-                               + open(os.path.join(HERE, 'codegen.py'), 'rb').read() + open(os.path.join(HERE, 'metroid_perf.py'), 'rb').read()).hexdigest()
++                               + open(os.path.join(HERE, 'codegen.py'), 'rb').read() + open(os.path.join(HERE, 'metroid_perf.py'), 'rb').read()
++                               + open(os.path.join(HERE, 'nxloader.py'), 'rb').read()
++                               + (open(s9, 'rb').read()[:0x100] if os.path.isfile(s9) else b'')).hexdigest()
+         if os.path.isfile(gen_marker) and open(gen_marker).read().strip() == gen_key:
+             log('Generated code already in place: kept')
+             files = sorted(os.path.join(build, f) for f in os.listdir(build) if f.startswith('code_') and f.endswith('.c'))
+diff --git a/nxloader.py b/nxloader.py
+index 966ba85..1c041ca 100644
+--- a/nxloader.py
++++ b/nxloader.py
+@@ -264,7 +264,8 @@ def nro_romfs(m):
+     return nro_asset(m, 2)
+ 
+ 
+-MODULE_ORDER = ['rtld', 'main'] + ['subsdk%d' % i for i in range(10)] + ['sdk']
++# subsdk9 (exlaunch, the randomizer) is placed after sdk so adding it does not move the bases of the other modules
++MODULE_ORDER = ['rtld', 'main'] + ['subsdk%d' % i for i in range(9)] + ['sdk', 'subsdk9']
+ 
+ 
+ def find_exefs(folder):
+diff --git a/runtime/dread_ui/ov.cpp b/runtime/dread_ui/ov.cpp
+index bf983e3..6c57b6b 100644
+--- a/runtime/dread_ui/ov.cpp
++++ b/runtime/dread_ui/ov.cpp
+@@ -310,7 +310,7 @@ extern "C" void ov_gl_frame(void) {
+         IMGUI_CHECKVERSION(); ImGui::CreateContext(); ImGuiIO& io = ImGui::GetIO();
+         io.IniFilename = nullptr; io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad; io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+         load_fonts(io); apply_style(1.0f);
+-        if (!ImGui_ImplOpenGL3_Init(nullptr)) { ImGui::DestroyContext(); Lock k; g_q.open = false; return; }
++        if (!ImGui_ImplOpenGL3_Init(nullptr)) { ImGui::DestroyContext(); logf_(0, "menu: the OpenGL backend of Dear ImGui did not start\n"); Lock k; g_q.open = false; return; }
+         g_ready = true; g_t_open = ImGui::GetTime();
+     }
+     ImGuiIO& io = ImGui::GetIO();
+diff --git a/runtime/kernel.c b/runtime/kernel.c
+index 058a88f..d94b908 100644
+--- a/runtime/kernel.c
++++ b/runtime/kernel.c
+@@ -475,6 +475,43 @@ static u32 svc_unmap_memory(u64 dst, u64 src, u64 size){
+   mem_set_state(src,size,0xFFFFFFFFu,PERM_RW);
+   return 0; }
+ 
++/* MapProcessMemory / UnmapProcessMemory on the current process (exlaunch writes code through this alias). The guest has no real
++   alias, so the alias is a copy plus a snapshot of it: whenever any alias is unmapped, the words every active alias changed since
++   its last sync are written back to src (exlaunch keeps some aliases mapped for good, e.g. the trampoline pool and whole modules,
++   and unmaps the pages it patches right after filling it); src stays mapped and accessible */
++#define NPROC_ALIAS 16
++static struct { u64 dst, src, size; u8* snap; } g_palias[NPROC_ALIAS];
++
++static void proc_alias_sync(void){
++  for(int i=0;i<NPROC_ALIAS;i++) if(g_palias[i].size){
++    u8* a=GP(g_palias[i].dst); u8* o=g_palias[i].snap; u8* d=GP(g_palias[i].src); int n=0;
++    for(u64 b=0;b<g_palias[i].size;b+=0x1000){ if(!memcmp(a+b,o+b,0x1000)) continue;
++      for(u64 k=b;k<b+0x1000;k+=4) if(memcmp(a+k,o+k,4)){
++        if(g_verbose>=2 && n++<24) LOGV("procmem: %llx = %08x (was %08x)\n",(unsigned long long)(g_palias[i].src+k),*(u32*)(a+k),*(u32*)(d+k));
++        memcpy(d+k,a+k,4); memcpy(o+k,a+k,4); } } } }
++
++static u32 svc_map_proc_memory(u64 dst, u32 proc, u64 src, u64 size){
++  if(proc!=H_CUR_PROC) return R_BADHANDLE;
++  if((dst|src|size)&0xFFF || !size) return R_BADADDR;
++  if(dst<AS_BASE || dst+size>AS_SIZE) return R_BADREGION;   /* the ASLR region (GetInfo 12/13), where exlaunch picks a free spot */
++  int slot=0; while(slot<NPROC_ALIAS && g_palias[slot].size) slot++;
++  if(slot==NPROC_ALIAS) return R_OUTOFMEM;
++  u8* snap=malloc(size); if(!snap) return R_OUTOFMEM;
++  { int r=mem_map(dst,size,MS_ALIASCODEDATA,PERM_RW); if(r){ free(snap); return r==-1? R_BADMEMSTATE : R_OUTOFMEM; } }
++  memcpy(GP(dst),GP(src),size); memcpy(snap,GP(src),size);
++  g_palias[slot].dst=dst; g_palias[slot].src=src; g_palias[slot].size=size; g_palias[slot].snap=snap;
++  LOGV("procmem: map %llx <- %llx (%llx bytes)\n",(unsigned long long)dst,(unsigned long long)src,(unsigned long long)size);
++  return 0; }
++
++static u32 svc_unmap_proc_memory(u64 dst, u32 proc, u64 src, u64 size){
++  if(proc!=H_CUR_PROC) return R_BADHANDLE;
++  if((dst|src|size)&0xFFF || !size) return R_BADADDR;
++  LOGV("procmem: unmap %llx -> %llx (%llx bytes)\n",(unsigned long long)dst,(unsigned long long)src,(unsigned long long)size);
++  proc_alias_sync();
++  for(int i=0;i<NPROC_ALIAS;i++) if(g_palias[i].size && g_palias[i].dst==dst){ g_palias[i].size=0; free(g_palias[i].snap); g_palias[i].snap=NULL; }
++  mem_unmap(dst,size);
++  return 0; }
++
+ static void shm_destroy(KObj* o){ KShmem* s=(KShmem*)o; if(!s->gaddr) free(s->host); free(o->waiters); free(s); }
+ 
+ KShmem* kshmem_new(u64 size, const char* name){
+@@ -524,7 +561,8 @@ static int default_core(void){ return g_mod? (int)g_mod->main_core : 0; }
+ static u64 image_memory(void){
+   static u64 sz;
+   if(!sz){
+-    for(u32 i=0;i<g_mod->nmods;i++) sz+=(g_mod->mods[i].size+0xFFF)&~0xFFFull;
++    for(u32 i=0;i<g_mod->nmods;i++){ MemBlock b; mem_query(g_mod->mods[i].base,&b); if(b.state==MS_FREE) continue;   /* subsdk9 is optional */
++      sz+=(g_mod->mods[i].size+0xFFF)&~0xFFFull; }
+     sz+=((g_mod->main_stack? g_mod->main_stack : 0x100000)+0xFFF)&~0xFFFull; }
+   return sz; }
+ 
+@@ -569,6 +607,7 @@ static u32 svc_get_info_(u32 id0, u32 h, u64 id1, u64* out){
+     case 0xF0000002: { KThread* t=kthread_cur(); (void)t; *out=plat_ns()*192/10000; return 0; }
+     case 26: *out=1; return 0;
+     case 27: case 28: *out=0; return 0;
++    case 65001: *out=H_CUR_PROC; return 0;                       /* Atmosphere: the current process handle (exlaunch asks for it) */
+     default: WARN("GetInfo %u/%llu not implemented\n",id0,(unsigned long long)id1); *out=0; return 0;
+   }
+   (void)h;
+@@ -649,6 +688,10 @@ void kernel_dump_regs(CPU* c){
+       char line[400]; int n=snprintf(line,sizeof line,"  code %llx:",(unsigned long long)base);
+       for(int w=0;w<16;w++) n+=snprintf(line+n,sizeof line-n," %08x",gr32(base+w*4));
+       WARN("%s\n",line); } }
++  /* code around pc when it is outside the compiled modules' .text (a hook trampoline run by the interpreter) */
++  { u64 pc=c->pc&~3ull; MemBlock cb; mem_query(pc,&cb);
++    if(cb.state!=MS_FREE && pc>0x100){ char line[400]; int n=snprintf(line,sizeof line,"  code at pc %llx:",(unsigned long long)(pc-0x10));
++      for(int w=0;w<16;w++) n+=snprintf(line+n,sizeof line-n," %08x",gr32(pc-0x10+w*4)); WARN("%s\n",line); } }
+   /* what the regs point at (objects, vtables) */
+   for(int r=0;r<29;r++){ u64 a=c->x[r]; if(a<0x10000 || a>=AS_SIZE-64 || (a&7)) continue; MemBlock b; mem_query(a,&b); if(b.state==MS_FREE || b.state==MS_INACCESSIBLE) continue;
+     WARN("  mem x%d %llx: %llx %llx %llx %llx\n",r,(unsigned long long)a,(unsigned long long)gr64(a),(unsigned long long)gr64(a+8),(unsigned long long)gr64(a+16),(unsigned long long)gr64(a+24));
+@@ -868,6 +911,8 @@ static void swr_svc_(CPU* c, u32 imm){
+     x[0]=svc_signal_addr(a,(u32)x[1],(i32)(u32)x[2],(i32)(u32)x[3]); arb_note('S',t,a,(u32)x[1],(i32)(u32)x[2],(i32)(u32)x[3],(u32)x[0],b,nw); return; }
+   case 0x45: { KEvent* e=kevent_new("user event",0); u32 w=h_new(&e->o), r=h_new(&e->o); x[0]=0; x[1]=w; x[2]=r; return; }
+   case 0x4B: { x[0]=R_NOTIMPL; return; }
++  case 0x74: x[0]=svc_map_proc_memory(x[0],(u32)x[1],x[2],x[3]); return;
++  case 0x75: x[0]=svc_unmap_proc_memory(x[0],(u32)x[1],x[2],x[3]); return;
+   case 0x6F: { /* GetSystemInfo(type, handle, subtype). newer SDKs abort on boot if this returns 0 */
+     u32 ty=(u32)x[1]; u64 sub=x[3], o=0;
+     if(ty==0) o= sub==0? mem_total() : sub==1? 0x1FB00000ull : sub==2? 0x29D00000ull : 0x6000000ull;   /* pool physical size */
+diff --git a/runtime/loader.c b/runtime/loader.c
+index 83e0437..0525dd6 100644
+--- a/runtime/loader.c
++++ b/runtime/loader.c
+@@ -50,6 +50,41 @@ static void dread_ultrawide(const SwrModInfo* mi){
+   else if(on==2) LOG("aspect: 16:10 patch applied (1440x900 base; at theboy181's 21:9 mod location)\n");
+   else LOG("ultrawide: 21:9 patch applied (1680x720 base; theboy181's 21:9 mod)\n"); }
+ 
++/* ExeFS patches from the mods: <data>/mods/<mod>/exefs/<BUILD ID>.ips (IPS32, offsets counted from the NSO header like
++   Atmosphere's), applied over the memory image of main, mods in load_order.txt order (else alphabetical). The randomizer
++   brings one: its HasRandomizerPatches sentinel plus a few code patches, which the generated code notices (HOOKED_INSNS) */
++static void ips_apply(const char* path, const SwrModInfo* mi){
++  u64 n; u8* f=read_all(path,&n); if(!f) return;
++  if(n<9 || memcmp(f,"IPS32",5)){ WARN("%s: not an IPS32 patch\n",path); free(f); return; }
++  u64 i=5; int recs=0;
++  while(i+4<=n && memcmp(f+i,"EEOF",4)){
++    if(i+6>n) break;
++    u64 off=((u64)f[i]<<24)|((u64)f[i+1]<<16)|((u64)f[i+2]<<8)|f[i+3]; u64 sz=((u64)f[i+4]<<8)|f[i+5]; i+=6;
++    u64 at= off>=0x100? off-0x100 : 0; u8 fill=0; const u8* src=NULL;
++    if(sz){ if(i+sz>n) break; src=f+i; i+=sz; }
++    else { if(i+3>n) break; sz=((u64)f[i]<<8)|f[i+1]; fill=f[i+2]; i+=3; }
++    if(off<0x100 || at+sz>mi->size){ WARN("%s: record at %llx outside the module\n",path,(unsigned long long)off); continue; }
++    if(src) memcpy(GP(mi->base+at),src,sz); else memset(GP(mi->base+at),fill,sz);
++    recs++; }
++  LOG("exefs patch %s: %d records\n",path,recs); free(f); }
++
++static int ips_cmp(const void* a, const void* b){ return strcmp(*(char* const*)a,*(char* const*)b); }
++
++static void ips_apply_mods(const SwrModInfo* mi){
++  char id[41]; for(int k=0;k<20;k++) snprintf(id+2*k,3,"%02X",mi->build_id[k]);
++  char root[1200]; snprintf(root,sizeof root,"%smods",g_datadir);
++  if(!plat_is_dir(root)) return;
++  char* names[256]; int nn=0; char lo[1300]; snprintf(lo,sizeof lo,"%s/load_order.txt",root);
++  FILE* lf=fopen(lo,"r");
++  if(lf){ char line[600];
++    while(fgets(line,sizeof line,lf) && nn<256){ char* s=line; while(*s==' '||*s=='\t') s++; size_t m=strlen(s); while(m && (s[m-1]=='\n'||s[m-1]=='\r'||s[m-1]==' ')) s[--m]=0;
++      if(*s && *s!='#' && *s!='-') names[nn++]=strdup(s); }
++    fclose(lf); }
++  else { PDir d; if(!plat_dir_open(&d,root)) { while(plat_dir_next(&d) && nn<256) if(d.is_dir && strcmp(d.name,".") && strcmp(d.name,"..")) names[nn++]=strdup(d.name); plat_dir_close(&d); }
++    qsort(names,nn,sizeof(char*),ips_cmp); }
++  for(int k=0;k<nn;k++){ char p[1500]; snprintf(p,sizeof p,"%s/%s/exefs/%s.ips",root,names[k],id);
++    FILE* t=fopen(p,"rb"); if(t){ fclose(t); ips_apply(p,mi); } free(names[k]); } }
++
+ static int load_one(const SwrModInfo* mi){
+   char p[1200]; u64 fsz=0; u8* f=NULL;
+   const char* dirs[]={"exefs/",""};
+@@ -72,6 +107,7 @@ static int load_one(const SwrModInfo* mi){
+   } else { WARN("%s: unknown format\n",p); free(f); return -1; }
+   free(f);
+   dread_ultrawide(mi);
++  if(!strcmp(mi->name,"main")) ips_apply_mods(mi);
+   /* .text RX, .rodata R, .data/.bss RW */
+   u64 t0=mi->base+mi->text_off, r0=mi->base+mi->ro_off, d0=mi->base+mi->data_off;
+   mem_set_state(t0,((mi->text_size+0xFFF)&~0xFFFu),MS_CODE,PERM_RX);
+@@ -80,6 +116,14 @@ static int load_one(const SwrModInfo* mi){
+   LOG("module %-8s at %010llx (%.1f MB)\n",mi->name,(unsigned long long)mi->base,(double)size/1048576.0);
+   return 0; }
+ 
++/* subsdk9 is the randomizer's exlaunch module: it is generated with the game but only loaded when exefs/subsdk9 exists,
++   so without it the game starts as vanilla (the rtld finds no module there) */
++static int optional_absent(const SwrModInfo* mi){
++  if(strcmp(mi->name,"subsdk9")) return 0;
++  char p[1200]; snprintf(p,sizeof p,"%sexefs/%s",g_datadir,mi->name);
++  FILE* f=fopen(p,"rb"); if(f){ fclose(f); return 0; }
++  LOG("module %-8s not installed: skipped\n",mi->name); return 1; }
++
+ int loader_load(void){
+-  for(u32 i=0;i<g_mod->nmods;i++) if(load_one(&g_mod->mods[i])) return -1;
++  for(u32 i=0;i<g_mod->nmods;i++){ if(optional_absent(&g_mod->mods[i])) continue; if(load_one(&g_mod->mods[i])) return -1; }
+   return 0; }
+diff --git a/runtime/main.c b/runtime/main.c
+index 6cc6fc4..d3c8b37 100644
+--- a/runtime/main.c
++++ b/runtime/main.c
+@@ -115,8 +115,10 @@ static char g_hints_path[1200];
+ /* ============================================================ exports for the generated code */
+ static PMutex g_hint_lock; static u64* g_hints; static int g_nhints, g_caphints, g_hints_dirty;
+ 
++static u64 g_seen[1024]; static int g_nseen;   /* addresses the interpreter was entered at in this run, each logged once (the hints file only remembers across runs) */
+ static void rt_note_hint(u64 pc){
+   pm_lock(&g_hint_lock);
++  { int k=0; while(k<g_nseen && g_seen[k]!=pc) k++; if(k==g_nseen && g_nseen<1024){ g_seen[g_nseen++]=pc; LOGV("interpreter: entered %llx\n",(unsigned long long)pc); } }
+   for(int i=g_nhints-1;i>=0 && i>=g_nhints-64;i--) if(g_hints[i]==pc){ pm_unlock(&g_hint_lock); return; }
+   int found=0; for(int i=0;i<g_nhints;i++) if(g_hints[i]==pc){ found=1; break; }
+   if(!found){ if(g_nhints==g_caphints){ g_caphints=g_caphints?g_caphints*2:256; g_hints=realloc(g_hints,8*g_caphints); } g_hints[g_nhints++]=pc; g_hints_dirty=1;
+diff --git a/runtime/svc_core.c b/runtime/svc_core.c
+index 7af5e99..c3b9a76 100644
+--- a/runtime/svc_core.c
++++ b/runtime/svc_core.c
+@@ -135,7 +135,7 @@ static int am_appfn(SvcObj* o, IpcCtx* c){         /* IApplicationFunctions */
+     case 110: out32(c,0); return 0;
+     case 22: case 27: case 28: case 32: case 33: case 34: case 35: case 36: case 37: case 66: case 67: case 68: case 90: case 100: case 101: case 120: case 124: return 0;
+     case 151: return RC(128,2);                                      /* TryPopFromNotificationStorageChannel: nothing queued */
+-    case 23: { char v[16]="1.0.0"; outbytes(c,v,16); return 0; }         /* GetDisplayVersion */
++    case 23: { char v[16]="1.0.0"; if(g_title_id==0x010093801237C000ull) strcpy(v,"2.1.0"); outbytes(c,v,16); return 0; }   /* GetDisplayVersion: Metroid Dread is 2.1.0 (exlaunch picks its offsets by it) */
+     case 40: out8(c,0); return 0;                                      /* NotifyRunning */
+     case 50: out64(c,0x1111222233334444ull); out64(c,0x5555666677778888ull); return 0;
+     case 60: case 61: return 0;
+diff --git a/switchrecomp.py b/switchrecomp.py
+index 0fe29db..23730ff 100644
+--- a/switchrecomp.py
++++ b/switchrecomp.py
+@@ -291,7 +291,7 @@ def build_runtime(cc, out, target_win, backend, say, opt='2'):
+     oh = os.path.join(RT, 'oh264', 'win' if target_win else 'lin')
+     h264 = os.path.isfile(os.path.join(oh, 'libdecoder.a')) and backend in ('win32', 'x11', 'headless')
+     vp = os.path.join(RT, 'vp9', 'win' if target_win else 'lin')   # libvpx (VP9 .webm videos); optional
+-    vp9 = os.path.isfile(os.path.join(vp, 'libvpx.a')) and backend in ('win32', 'x11', 'headless')
++    vp9 = os.path.isfile(os.path.join(vp, 'libvpx.a')) and backend in ('win32', 'x11', 'headless') and not os.environ.get('SWR_NO_VP9')   # SWR_NO_VP9=1: for a toolchain that does not match the prebuilt libvpx (UCRT)
+     srcs += [os.path.join(RT, 'host1x.c'), os.path.join(RT, 'snxvk_glue.c')]
+     # Metroid Dread front end + in-game menu (Dear ImGui, runtime/dread_ui); prebuilt by work-profiler/build_imgui.py
+     imgui = os.path.join(RT, 'imgui', 'libimgui.a')
+diff --git a/work-profiler/build_imgui.py b/work-profiler/build_imgui.py
+index 5f98e6c..1d83c8c 100644
+--- a/work-profiler/build_imgui.py
++++ b/work-profiler/build_imgui.py
+@@ -4,7 +4,7 @@ runtime build needs no path into third_party."""
+ import os, shutil, subprocess, sys, concurrent.futures as cf
+ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
+ SRC = os.path.join(ROOT, 'third_party', 'imgui-1.92.5'); OUT = os.path.join(ROOT, 'runtime', 'imgui')
+-OBJ = os.path.join(OUT, 'obj'); G = os.path.join(ROOT, 'gcc', 'Library', 'bin')
++OBJ = os.path.join(OUT, 'obj'); G = os.environ.get('SWR_GCC_BIN') or os.path.join(ROOT, 'gcc', 'Library', 'bin')   # SWR_GCC_BIN: another MinGW's bin folder
+ FILES = ['imgui.cpp', 'imgui_draw.cpp', 'imgui_tables.cpp', 'imgui_widgets.cpp',
+          'backends/imgui_impl_win32.cpp', 'backends/imgui_impl_opengl3.cpp', 'backends/imgui_impl_dx11.cpp']
+ HEADERS = ['imgui.h', 'imconfig.h', 'imgui_internal.h', 'imstb_rectpack.h', 'imstb_textedit.h', 'imstb_truetype.h',

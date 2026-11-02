@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+app/build/
+app/dist/
+*.spec
+*.exe
+*.rdvgame
+# never commit game files
+*.nso
+*.nca
+*.bfstm
+Metroid Dread_data/

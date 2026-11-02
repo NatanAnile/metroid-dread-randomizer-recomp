@@ -1,0 +1,4 @@
+# Needed to build apply_rdvgame.exe (not to use it). Keep open-dread-rando at the version your Randovania asks for:
+# Randovania 12.0.0 -> open-dread-rando==2.21.0 (see <Randovania>\_internal\randovania.egg-info\requires.txt).
+open-dread-rando==2.21.0
+pyinstaller
