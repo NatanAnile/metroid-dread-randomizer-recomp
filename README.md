@@ -49,7 +49,20 @@ Testado no Windows 11 com os fontes do Dread Recomp 0.4.0, Randovania 12.0.0 e o
 
 ## Licença e créditos
 
-GPL-3.0. Veja [LICENSE](LICENSE) e [NOTICE.md](NOTICE.md).
+GPL-3.0 ([LICENSE](LICENSE)). Notas de versão: [CHANGELOG.md](CHANGELOG.md).
+
+## Créditos
+
+Este projeto só existe por causa do trabalho de outras pessoas:
+
+- **SwitchRecomp by MZ Labs**: o recompilador e o runtime em que o Dread Recomp se baseia (Apache-2.0; [NOTICE-SwitchRecomp.txt](NOTICE-SwitchRecomp.txt) e [LICENSE-Apache-2.0.txt](LICENSE-Apache-2.0.txt)).
+- [**Dread Recomp**](https://github.com/yozander2009-stack/Metroid-Dread-Recomp) (yozander2009-stack): a recompilação de Metroid Dread que este patch modifica (GPL-3.0).
+- [**Randovania**](https://github.com/randovania/randovania): geração de seeds e a linha de comando usada pelo app (GPL-3.0).
+- [**open-dread-rando**](https://github.com/randovania/open-dread-rando): o patcher embutido no `apply_rdvgame.exe` (GPL-3.0).
+- [**open-dread-rando-exlaunch**](https://github.com/randovania/open-dread-rando-exlaunch): o módulo nativo (`subsdk9`) que o patch faz funcionar, um fork do [exlaunch](https://github.com/shadowninja108/exlaunch) de shadowninja108 (GPL-3.0; **não é distribuído aqui**).
+- [**mercury-engine-data-structures**](https://github.com/randovania/mercury-engine-data-structures): formatos de arquivo do jogo, embutido junto do open-dread-rando.
+
+Lista completa e licenças em [NOTICE.md](NOTICE.md). *Metroid Dread* é marca e propriedade da Nintendo.
 
 ---
 
@@ -105,4 +118,17 @@ Tested on Windows 11 with Dread Recomp 0.4.0 sources, Randovania 12.0.0 and open
 
 ### License and credits
 
-GPL-3.0, see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md) for the projects this builds on.
+GPL-3.0 ([LICENSE](LICENSE)). Release notes: [CHANGELOG.md](CHANGELOG.md).
+
+## Credits
+
+This project only exists thanks to other people's work:
+
+- **SwitchRecomp by MZ Labs**: the recompiler and runtime Dread Recomp is based on (Apache-2.0; [NOTICE-SwitchRecomp.txt](NOTICE-SwitchRecomp.txt) and [LICENSE-Apache-2.0.txt](LICENSE-Apache-2.0.txt)).
+- [**Dread Recomp**](https://github.com/yozander2009-stack/Metroid-Dread-Recomp) (yozander2009-stack): the Metroid Dread recompilation this patch modifies (GPL-3.0).
+- [**Randovania**](https://github.com/randovania/randovania): seed generation and the command line the app uses (GPL-3.0).
+- [**open-dread-rando**](https://github.com/randovania/open-dread-rando): the patcher bundled in `apply_rdvgame.exe` (GPL-3.0).
+- [**open-dread-rando-exlaunch**](https://github.com/randovania/open-dread-rando-exlaunch): the native module (`subsdk9`) this patch makes work, a fork of shadowninja108's [exlaunch](https://github.com/shadowninja108/exlaunch) (GPL-3.0; **not distributed here**).
+- [**mercury-engine-data-structures**](https://github.com/randovania/mercury-engine-data-structures): game file formats, bundled with open-dread-rando.
+
+Full list and licenses in [NOTICE.md](NOTICE.md). *Metroid Dread* is a trademark and property of Nintendo.

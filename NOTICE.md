@@ -6,10 +6,10 @@ Keep their credits and licenses when redistributing.
 | Project | Role here | License |
 |---|---|---|
 | [Dread Recomp](https://github.com/yozander2009-stack/Metroid-Dread-Recomp) | The recompilation this patch modifies (EXE and renderer) | GPL-3.0 |
-| SwitchRecomp by MZ Labs | The static recompiler and runtime Dread Recomp is based on | Apache-2.0 (keep its NOTICE) |
+| **SwitchRecomp by MZ Labs** | The static recompiler and runtime Dread Recomp is based on; the patch modifies its files | Apache-2.0: keep [NOTICE-SwitchRecomp.txt](NOTICE-SwitchRecomp.txt) and [LICENSE-Apache-2.0.txt](LICENSE-Apache-2.0.txt); the credit "SwitchRecomp by MZ Labs" must stay visible (see the README) |
 | [Randovania](https://github.com/randovania/randovania) | Seed generation and its command line, called by the app | GPL-3.0 |
 | [open-dread-rando](https://github.com/randovania/open-dread-rando) | Patcher bundled inside `apply_rdvgame.exe` | GPL-3.0 |
-| [open-dread-rando-exlaunch](https://github.com/randovania/open-dread-rando-exlaunch) | The native module (`subsdk9`) whose hooks the patch supports. **Not distributed here**: copy it from your Randovania install | GPL-3.0 |
+| [open-dread-rando-exlaunch](https://github.com/randovania/open-dread-rando-exlaunch) (a fork of [exlaunch](https://github.com/shadowninja108/exlaunch) by shadowninja108) | The native module (`subsdk9`) whose hooks the patch supports. **Not distributed here**: copy it from your Randovania install | GPL-3.0 |
 | [mercury-engine-data-structures](https://github.com/randovania/mercury-engine-data-structures) | Game file formats, bundled with open-dread-rando | see upstream |
 | PyInstaller, Python/tkinter | Packaging and the app window | see upstream |
 
