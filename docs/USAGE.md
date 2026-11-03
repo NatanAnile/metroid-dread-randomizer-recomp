@@ -4,11 +4,26 @@
 
 ## What you need
 
-- A Dread Recomp installation, set up with your own dump of Metroid Dread **2.1.0** (build ID `646761F643AFEBB379EDD5E6A5151AF2CEF93DC1`), built **with `patches/recomp-randomizer-support.patch`** ([BUILDING](BUILDING.md)).
+- A Dread Recomp installation (the official release, 0.4.0), set up with your own dump of Metroid Dread **2.1.0** (build ID `646761F643AFEBB379EDD5E6A5151AF2CEF93DC1`). The app adds the patch's support itself (below); building it by hand is in [BUILDING](BUILDING.md).
 - Randovania installed (tested: 12.0.0). The app uses its command line; nothing is changed in Randovania.
-- The exlaunch module `subsdk9` from Randovania, in the game's ExeFS (below).
+- Randovania's exlaunch module `subsdk9`: the app copies it from your Randovania (below).
 
-## One-time: the exlaunch module
+## One-time: install the randomizer support (automatic)
+
+A stock release cannot run seeds: its `Metroid Dread.exe` and its generated game code do not know the exlaunch module. The app detects that (a warning in its window) and offers **Install randomizer support** (also when you press **Apply a seed...**). With the game closed, it:
+
+1. keeps the originals in `<game>\_backup_stock` (never overwritten);
+2. copies the patched `nxloader.py` and `codegen.py` into `recompiler\`, adjusts the generation key in `dread_setup.py`, and copies `subsdk9` from Randovania into `Metroid Dread_data\exefs\`;
+3. regenerates the game code with the release's own recompiler (about 10-25 minutes, about 2 GB of free space; the progress shows in the window; do not close it);
+4. replaces `Metroid Dread.exe` with the patched build bundled in the app.
+
+The game data (`romfs`) is only read. Nothing from the game is in the app or in this repository: the code is generated on your PC from your dump.
+
+**The patched exe is the OpenGL build**: the original exe's Vulkan renderer and DLSS are not in it. The original exe stays in `_backup_stock` if you want to compare.
+
+By hand (without the app), the same steps are in [BUILDING](BUILDING.md); the part below is the module's source.
+
+### The exlaunch module
 
 Randovania ships the module that runs on the Switch:
 
@@ -16,7 +31,7 @@ Randovania ships the module that runs on the Switch:
 <Randovania>\_internal\open_dread_rando_exlaunch\deploy\subsdk9
 ```
 
-Copy it to `Metroid Dread_data\exefs\subsdk9` in your Dread Recomp folder. It is not redistributed here.
+The app copies it to `Metroid Dread_data\exefs\subsdk9` for you (by hand: copy it there). It is not redistributed here.
 
 The game code must then be generated **once** with that module present (the same code serves every seed, with or without a mod):
 

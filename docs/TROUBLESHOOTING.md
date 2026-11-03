@@ -8,7 +8,9 @@ Always look at `Metroid Dread.log` (next to the EXE) first.
 | Title screen shows a literal `<versions>` | The mod was made by a tool that does not fill the placeholder (Randovania's `patcher-data` leaves it). Use `apply_rdvgame`. |
 | Items invisible, wrong sounds, no randomizer Lua log | The exlaunch hooks are not firing. Check the log has `module subsdk9 ...`. Run the guard audit ([BUILDING](BUILDING.md)). The game code must have been generated **with** `subsdk9` present. |
 | A message that should be hidden stays on screen (e.g. "Upgrading suit for Aeion compatibility...") | A patched instruction has no guard in the generated code. Run the audit; fix the address in `codegen.py` and regenerate. |
-| Log says `module subsdk9 not installed: skipped` | `exefs\subsdk9` is missing: the game runs as vanilla. Copy the file ([USAGE](USAGE.md)). |
+| Log says `module subsdk9 not installed: skipped` | `exefs\subsdk9` is missing: the game runs as vanilla. Press **Install randomizer support** or copy the file ([USAGE](USAGE.md)). |
+| The app warns "stock build" / "generated without the randomizer module" | Press **Install randomizer support** ([USAGE](USAGE.md)). |
+| Install stops with an error | Read the line after `ERROR:`. Free space (about 2 GB) and a closed game are the usual causes; the originals are in `<game>\_backup_stock`. Running it again reuses the objects already compiled. |
 | Game does not start: `Cannot find module` / build ID warnings | The ExeFS in `exefs\` is not game 2.1.0, or the generated code is from a different ExeFS. Run the setup again. |
 | App: "Close the game first." | `Metroid Dread.exe` is running. Close it. (Replacing the mod under a running game can break the session.) |
 | App: "This tool carries open-dread-rando X, but Randovania Y needs Z" | Rebuild the app with the version Randovania asks for ([BUILDING](BUILDING.md)). |

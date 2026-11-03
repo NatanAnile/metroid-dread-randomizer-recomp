@@ -1,5 +1,7 @@
 # Building
 
+You do not need this to play: the app's **Install randomizer support** does the same on a stock release, with the EXE bundled in the app ([USAGE](USAGE.md)). This page is for building the pieces yourself.
+
 ## 1. The patched recomp
 
 ```bash
@@ -36,8 +38,10 @@ renderer and DLSS are not built by this script.
 cd app
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt     # open-dread-rando at the version your Randovania requires
-.venv\Scripts\python build_app.py                 # dist\apply_rdvgame.exe (about 20 MB)
+.venv\Scripts\python build_app.py --repo <patched recomp clone>   # dist\apply_rdvgame.exe (about 24 MB)
 ```
+
+`--repo` is the clone from step 1 with the EXE built: `nxloader.py`, `codegen.py` and `bin\runtime_win64_win32.exe` are bundled in the app (they hold no game data) for its "Install randomizer support". Without `--repo` the app is built without them and that button reports them missing.
 
 `requirements.txt` pins the version Randovania 12.0.0 asks for (see `<Randovania>\_internal\randovania.egg-info\requires.txt`). To run it without building: `python apply_rdvgame.py` inside that venv.
 

@@ -36,9 +36,9 @@ no Switch). O código gerado do jogo é o mesmo para qualquer seed: trocar de se
 
 ## Início rápido (jogadores)
 
-1. Tenha um Dread Recomp **com o patch** ([Compilação](docs/BUILDING.md)) e o módulo exlaunch em `Metroid Dread_data\exefs\subsdk9` ([Uso](docs/USAGE.md)).
+1. Tenha o Dread Recomp (release oficial) já montado com o seu dump e o Randovania instalado.
 2. Gere uma seed no Randovania e salve o `.rdvgame`.
-3. Feche o jogo, abra o `apply_rdvgame.exe`, clique em **Apply a seed...** e escolha o arquivo (ou arraste o `.rdvgame` sobre o exe).
+3. Feche o jogo, abra o `apply_rdvgame.exe`, clique em **Apply a seed...** e escolha o arquivo (ou arraste o `.rdvgame` sobre o exe). Na primeira vez, num release sem o patch, o app oferece **Install randomizer support**: regenera o código do jogo uma vez (10–25 min, ~2 GB livres) e troca o exe pelo patcheado (OpenGL; o original fica em `_backup_stock`) ([Uso](docs/USAGE.md)).
 4. Abra o jogo. **Back to vanilla**, na mesma janela, remove o mod.
 
 ## Estado
@@ -107,9 +107,9 @@ seed never needs a recompile.
 
 ### Quick start (players)
 
-1. Have a Dread Recomp build **with the patch**, based on your own official dump ([BUILDING](docs/BUILDING.md)), and the exlaunch module in `Metroid Dread_data\exefs\subsdk9` ([USAGE](docs/USAGE.md)).
+1. Have the official Dread Recomp release set up with your own dump, and Randovania installed.
 2. Generate a seed in Randovania and export/save its `.rdvgame`.
-3. Close the game, open `apply_rdvgame.exe`, press **Apply a seed...**, pick the file (or drag the `.rdvgame` onto the exe).
+3. Close the game, open `apply_rdvgame.exe`, press **Apply a seed...**, pick the file (or drag the `.rdvgame` onto the exe). The first time, on a release without the patch, the app offers **Install randomizer support**: it regenerates the game code once (10-25 min, ~2 GB free) and swaps the exe for the patched one (OpenGL build; the original is kept in `_backup_stock`) ([USAGE](docs/USAGE.md)).
 4. Start the game. **Back to vanilla** in the same window removes the mod.
 
 ### Status
