@@ -4,7 +4,7 @@
 
 ## What you need
 
-- A Dread Recomp installation (the official release, 0.4.0), set up with your own dump of Metroid Dread **2.1.0** (build ID `646761F643AFEBB379EDD5E6A5151AF2CEF93DC1`). The app adds the patch's support itself (below); building it by hand is in [BUILDING](BUILDING.md).
+- A Dread Recomp installation (the official release, 0.5.9 or newer; 0.4.0 needs the previous app, 1.1.0), set up with your own dump of Metroid Dread **2.1.0** (build ID `646761F643AFEBB379EDD5E6A5151AF2CEF93DC1`). The app adds the patch's support itself (below); building it by hand is in [BUILDING](BUILDING.md).
 - Randovania installed (tested: 12.0.0). The app uses its command line; nothing is changed in Randovania.
 - Randovania's exlaunch module `subsdk9`: the app copies it from your Randovania (below).
 

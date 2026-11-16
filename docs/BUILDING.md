@@ -7,7 +7,7 @@ You do not need this to play: the app's **Install randomizer support** does the 
 ```bash
 git clone https://github.com/yozander2009-stack/Metroid-Dread-Recomp
 cd Metroid-Dread-Recomp
-git checkout a48624c57e4fc165fd85f83fd7f0fc2868d247bc     # the base the patch was made against (patches/BASE.txt)
+git checkout c791bc9db174f3209213347e7b10a536605c32a8     # the base the patch was made against (patches/BASE.txt)
 git apply ../metroid-dread-randomizer-recomp/patches/recomp-randomizer-support.patch
 ```
 

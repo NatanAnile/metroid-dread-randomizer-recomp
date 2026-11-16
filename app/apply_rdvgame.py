@@ -59,7 +59,12 @@ def file_has(path, needle, chunk=1 << 24):
 
 
 def exe_ok(game): return file_has(os.path.join(game, 'Metroid Dread.exe'), b'subsdk9')
-def code_ok(game): return file_has(os.path.join(game, 'Metroid Dread_code.dll'), b'subsdk9')
+def translator_ok(game):
+    """the recompiler\\ in the folder is the patched one (subsdk9 after sdk): an official update puts the stock files back, and the
+    stock translator puts subsdk9 before sdk, so a rebuild with subsdk9 in the ExeFS gives code that no longer matches the verified build"""
+    rc = os.path.join(game, 'recompiler')
+    return file_has(os.path.join(rc, 'nxloader.py'), b"['sdk', 'subsdk9']") and file_has(os.path.join(rc, 'dread_setup.py'), b'rdv_take_guards')
+def code_ok(game): return translator_ok(game) and file_has(os.path.join(game, 'Metroid Dread_code.dll'), b'subsdk9')
 
 
 def support_problem(game):
@@ -88,6 +93,50 @@ GEN_KEY_NEW = ("open(os.path.join(HERE, 'metroid_perf.py'), 'rb').read()\n"
                "                               + (open(os.path.join(ex_dst, 'subsdk9'), 'rb').read()[:0x100] if os.path.isfile(os.path.join(ex_dst, 'subsdk9')) else b'')).hexdigest()")
 
 
+# apply_patches() of dread_setup.py checks every generated file against the SHA-256 of the stock codegen output. The guard lines of
+# codegen.py (they end with /*RDG*/) are not part of it: they come out for the check and the verified hunks, then go back in.
+SETUP_EDITS = [
+    (GEN_KEY_OLD, GEN_KEY_NEW),
+    ("        text = raw.replace('\\r\\n', '\\n')\n"
+     "        have = hashlib.sha256(text.encode('latin-1')).hexdigest()\n",
+     "        text = raw.replace('\\r\\n', '\\n')\n"
+     "        text, guards = rdv_take_guards(text)   # the randomizer's guard lines are not part of the verified output\n"
+     "        have = hashlib.sha256(text.encode('latin-1')).hexdigest()\n"),
+    ("        if crlf:\n"
+     "            text = text.replace('\\n', '\\r\\n')\n",
+     "        text = rdv_put_guards(text, guards, spec['hunks'])\n"
+     "        if crlf:\n"
+     "            text = text.replace('\\n', '\\r\\n')\n"),
+    ("def apply_patches(build):\n",
+     "RDG = '/*RDG*/'   # ends every guard line of codegen.py\n\n\n"
+     "def rdv_take_guards(text):\n"
+     "    kept, guards = [], []\n"
+     "    for l in text.split('\\n'):\n"
+     "        if l.endswith(RDG): guards.append((len(kept), l))\n"
+     "        else: kept.append(l)\n"
+     "    return '\\n'.join(kept), guards\n\n\n"
+     "def rdv_put_guards(text, guards, hunks):\n"
+     "    lines = text.split('\\n')\n"
+     "    for k, (p, l) in enumerate(guards):\n"
+     "        if any(first < p < end for first, end, add in hunks):\n"
+     "            raise Fail('A randomizer guard sits inside a verified patch (line %d).' % p)\n"
+     "        lines.insert(p + sum(len(add) - (end - first) for first, end, add in hunks if end <= p) + k, l)\n"
+     "    return '\\n'.join(lines)\n\n\n"
+     "def apply_patches(build):\n"),
+]
+
+
+def patch_setup(txt):
+    """dread_setup.py with the randomizer's edits (all or nothing); None if its layout is not the expected one"""
+    nl = '\r\n' if '\r\n' in txt else '\n'
+    for old, new in SETUP_EDITS:
+        old, new = old.replace('\n', nl), new.replace('\n', nl)
+        if new in txt: continue
+        if txt.count(old) != 1: return None
+        txt = txt.replace(old, new)
+    return txt
+
+
 def install_support(game, rdv, say):
     """Turns a stock Dread Recomp folder into the patched build: translator files + subsdk9, regenerate the game code once with the
     release's own recompiler (about 10-25 min, incremental afterwards), then the patched Metroid Dread.exe. The originals are kept
@@ -113,9 +162,9 @@ def install_support(game, rdv, say):
     if need_code:
         say('Updating the translator (recompiler)...')
         for n in ('nxloader.py', 'codegen.py'): shutil.copy2(files[n], os.path.join(rc, n))
-        txt = open(setup, encoding='utf-8', newline='').read()
-        if GEN_KEY_OLD in txt: open(setup, 'w', encoding='utf-8', newline='').write(txt.replace(GEN_KEY_OLD, GEN_KEY_NEW))
-        elif 'nxloader.py' not in txt: say('Warning: dread_setup.py has an unexpected layout; the generation key was left as it is.')
+        txt = open(setup, encoding='utf-8', newline='').read(); fixed = patch_setup(txt)
+        if fixed is None: raise Fail('dread_setup.py of this Dread Recomp has an unexpected layout: this version of the tool cannot patch it.')
+        if fixed != txt: open(setup, 'w', encoding='utf-8', newline='').write(fixed)
         marker = os.path.join(game, 'Metroid Dread_build', '.generated')
         if os.path.isfile(marker): os.remove(marker)   # force the one-time regeneration whatever the key says
         say('Regenerating the game code with the randomizer module. This takes about 10-25 minutes; do not close this window.')

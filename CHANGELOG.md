@@ -2,6 +2,26 @@
 
 Formato: a versão mais nova primeiro. Cada versão diz com quais versões foi testada. / Newest first. Each version lists what it was tested with.
 
+## [1.2.0] — 2026-11-16
+
+**Português**
+
+- Port do suporte ao randomizer para o Dread Recomp **0.5.9** (upstream `c791bc9`), que quebrou o patch da 0.4.0. O app 1.2.0 instala esse suporte num release 0.5.9; o 1.1.0 continua sendo o app para a 0.4.0.
+- O patch ficou menor: 9 arquivos (o upstream já incorporou a variável `SWR_GCC_BIN` do `build_imgui.py`). `codegen.py` e `nxloader.py` não mudaram no upstream.
+- Corrigido: depois de atualizar o Dread Recomp, o app achava que o suporte já estava instalado (o `Metroid Dread_code.dll` antigo tinha `subsdk9`) e deixava o `recompiler\` oficial; o setup do jogo então falhava com "The generated code does not match the verified 2.1.0 build (code_217.c)". Agora o app também confere se o `nxloader.py` é o patcheado.
+- Corrigido: na 0.5.9 um dos fixes verificados do recomp e uma guarda do randomizer caem no mesmo arquivo gerado (`code_097.c`), e o setup parava com "The generated code does not match the verified 2.1.0 build". As linhas de guarda agora terminam com `/*RDG*/` e o `dread_setup.py` as tira para conferir e aplicar os fixes, e as devolve depois (o app faz essa edição no `dread_setup.py` do release).
+- Para usar: atualize o Dread Recomp para a 0.5.9 pelo atualizador oficial, abra o app e clique em **Install randomizer support** (regenera o código do jogo uma vez), depois aplique a seed.
+- Testado (Windows 11, Dread Recomp 0.5.9, Randovania 12.0.0, open-dread-rando 2.21.0, jogo 2.1.0): instalação do suporte num release 0.5.9 (um rebuild), seed aplicada, jogo abrindo com o `subsdk9` e a seed, sem crash em ~40 s, e `audit_guards.py` com `ALL COVERED`. **Não testado:** jogar a seed (itens, sons, textos, dicas), a janela do app por clique (testei a mesma função por código), outros PCs. Atenção: o updater oficial do jogo desfaz o suporte (troca exe e tradutor por oficiais); depois de atualizar, rode **Install randomizer support** de novo.
+
+**English**
+
+- Port of the randomizer support to Dread Recomp **0.5.9** (upstream `c791bc9`), which broke the 0.4.0 patch. App 1.2.0 installs it on a 0.5.9 release; 1.1.0 stays the app for 0.4.0.
+- The patch is smaller: 9 files (upstream now has the `SWR_GCC_BIN` variable in `build_imgui.py`). `codegen.py` and `nxloader.py` did not change upstream.
+- Fixed: after updating Dread Recomp the app thought the support was already installed (the old `Metroid Dread_code.dll` had `subsdk9`) and left the stock `recompiler\`; the game's setup then failed with "The generated code does not match the verified 2.1.0 build (code_217.c)". The app now also checks that `nxloader.py` is the patched one.
+- Fixed: in 0.5.9 one of the recomp's verified fixes and a randomizer guard land in the same generated file (`code_097.c`), and setup stopped with "The generated code does not match the verified 2.1.0 build". Guard lines now end with `/*RDG*/`, and `dread_setup.py` takes them out to check and apply the fixes, then puts them back (the app makes that edit in the release's `dread_setup.py`).
+- To use: update Dread Recomp to 0.5.9 with the official updater, open the app and click **Install randomizer support** (regenerates the game code once), then apply the seed.
+- Tested (Windows 11, Dread Recomp 0.5.9, Randovania 12.0.0, open-dread-rando 2.21.0, game 2.1.0): support install on a 0.5.9 release (one rebuild), a seed applied, the game opening with `subsdk9` and the seed, no crash in ~40 s, and `audit_guards.py` giving `ALL COVERED`. **Not tested:** playing the seed (items, sounds, texts, hints), clicking through the app window (I tested the same function from code), other PCs. Note: the game's official updater undoes the support (it puts the official exe and translator back); after updating, run **Install randomizer support** again.
+
 ## [1.1.0] — 2026-11-02
 
 **Português**

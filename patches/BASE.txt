@@ -1,3 +1,1 @@
-Upstream: https://github.com/yozander2009-stack/Metroid-Dread-Recomp
-Base commit: a48624c57e4fc165fd85f83fd7f0fc2868d247bc
-Base date: Fri Oct 30 14:59:30 2026 -0400
+c791bc9db174f3209213347e7b10a536605c32a8 Sun Nov 15 09:30:59 2026 -0500 AMD test mode on Linux: a small AMD-test AppImage that runs the installed game and saves a report (#68, #71)
