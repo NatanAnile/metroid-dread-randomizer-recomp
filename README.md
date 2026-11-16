@@ -49,6 +49,8 @@ Testado no Windows 11 com os fontes do Dread Recomp 0.4.0, Randovania 12.0.0 e o
 - **Não verificado:** multiworld / socket de Lua remoto, builds para Linux ou Android, builds com renderer Vulkan nativo e DLSS (o EXE de teste foi compilado sem eles), versões do jogo diferentes da 2.1.0, outras versões do Randovania/open-dread-rando.
 - Randomizer e vanilla **compartilham os slots de save**. Faça backup.
 
+- Esse projeto foi criado com auxílio de agentes de IA.
+
 ## Licença e créditos
 
 GPL-3.0 ([LICENSE](LICENSE)). Notas de versão: [CHANGELOG.md](CHANGELOG.md).
@@ -119,6 +121,9 @@ Tested on Windows 11 with Dread Recomp 0.4.0 sources, Randovania 12.0.0 and open
 - Verified in play: item pickups, progressive items (beams, missiles, ...), sounds, messages, hints, boss rewards (Corpius), E.M.M.I.s, the version text on the title screen, the in-game F1 menu, no frame-rate loss reported on the test machine; vanilla with the module present and no mod.
 - **Not verified:** multiworld / the remote-Lua socket (needs network services the recomp may not implement), Linux or Android builds, the native Vulkan renderer and DLSS builds (the test EXE was built without them), game versions other than 2.1.0, other Randovania or open-dread-rando versions.
 - Randomizer and vanilla **share save slots**. Back up your saves.
+
+- This project was created with the help of AI agents.
+
 
 ### License and credits
 
